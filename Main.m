@@ -84,6 +84,7 @@ codebook2 = CBtrain{speaker2};
 
 % uncomment this if you want to see the 2d clustering of the mel
 % coefficients
+
 % plotMelCepstrumWithVQ(melCepstrum1, melCepstrum2, codebook1, codebook2, coefIdx1, coefIdx2);
 
 %% Attempt to identify the speaker

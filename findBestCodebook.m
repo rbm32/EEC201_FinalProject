@@ -20,7 +20,7 @@ function bestCodebookIndex = findBestCodebook(MFCC, codebooks)
         distances = computeEuclideanDistance(MFCC, codebook);
         
         % Calculate the total distance by summing all the distances
-        totalDistances(i) = sum(distances(:));  % Sum all distances to get the total
+        totalDistances(i) = sum(min(distances));  % Sum all distances to get the total
         
     end
     
