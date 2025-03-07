@@ -28,8 +28,6 @@ if playAudioRecording
     end
 end
 
-%%
-
 
 %%
 %% Parameters
@@ -37,10 +35,10 @@ N_frame = 128;              % length of each frame
 Win = kaiser(N_frame, .5);  % Window function
 K = 10;                     % number of mel coefficients 
 Nover = round(N_frame/3);   % amount of overlap for each frame
-M=7;
-truncThresh = .2;
-iter = 5e3;
-eps = .00001;
+M=7;                        % Number of codewords
+truncThresh = .2;           % Threshold to truncate the time-domain signals
+iter = 5e3;                 % max number of iterations to perform on the LBG algorithm
+eps = .00001;               % error threshold for the LBG algorithm
 %%
 
 TrainData = truncateVectorByThreshold(TrainDataFull, truncThresh);
@@ -84,11 +82,12 @@ codebook1 = CBtrain{speaker1};
 codebook2 = CBtrain{speaker2};
 
 
+% uncomment this if you want to see the 2d clustering of the mel
+% coefficients
 % plotMelCepstrumWithVQ(melCepstrum1, melCepstrum2, codebook1, codebook2, coefIdx1, coefIdx2);
 
-%%
-MFCC1 = MFCCtrain{1};
-CB1 = CBtrain{1};
+%% Attempt to identify the speaker
+
 correctGuesses = [];
 identifiedSpeaker = [];
 for i=1:length(TestData)
@@ -98,8 +97,3 @@ end
 
 accuracy = sum(correctGuesses) ./ length(correctGuesses)
 
-
-
-
-
-%%
