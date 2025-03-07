@@ -43,6 +43,15 @@ iter = 5e3;
 eps = .00001;
 %%
 
+untitled(TrainDataFull, truncThresh, TestDataFull, K, Win, N_frame, Nover, Fs, M, iter, eps);
+
+
+
+
+
+%%
+
+function untitled(TrainDataFull, truncThresh, TestDataFull, K, Win, N_frame, Nover, Fs, M, iter, eps)
 TrainData = truncateVectorByThreshold(TrainDataFull, truncThresh);
 TestData = truncateVectorByThreshold(TestDataFull, truncThresh);
 
@@ -97,9 +106,4 @@ for i=1:length(TestData)
 end
 
 accuracy = sum(correctGuesses) ./ length(correctGuesses)
-
-
-
-
-
-%%
+end

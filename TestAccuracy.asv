@@ -1,6 +1,3 @@
-%% EEC 201 Final Project
-
-%% Download the speach files
 
 playAudioRecording = false; % Set to TRUE if you want to hear all audio recordings played
 
@@ -12,26 +9,6 @@ Ts = 1/Fs;
 [TestDataFull, testSpeakers] = readAudioFromFolder('Speach_Data_2024\Test_Data');
 
 
-
-
-% play Training Data
-if playAudioRecording
-    for i = 1:length(TrainData)
-        audioPlayer = audioplayer(TrainData{i},Fs);
-        playblocking(audioPlayer)
-    end
-    
-    % play Test Data
-    for i = 1:length(TestData)
-        audioPlayer = audioplayer(TestData{i},Fs);
-        playblocking(audioPlayer)
-    end
-end
-
-%%
-
-
-%%
 %% Parameters
 N_frame = 128;              % length of each frame
 Win = kaiser(N_frame, .5);  % Window function
@@ -41,8 +18,21 @@ M=7;
 truncThresh = .2;
 iter = 5e3;
 eps = .00001;
+
+results = {};
+k =1;
+for N_frame = 2.^([6 7 8 9])
+    
+    results{:,1} = GenerateAccuracy(TrainDataFull, truncThresh, TestDataFull, K, Win, N_frame, Nover, Fs, M, iter, eps);
+    
+
+    k = k+1
+end
+
+
 %%
 
+function [accuracy] = GenerateAccuracy(TrainDataFull, truncThresh, TestDataFull, K, Win, N_frame, Nover, Fs, M, iter, eps)
 TrainData = truncateVectorByThreshold(TrainDataFull, truncThresh);
 TestData = truncateVectorByThreshold(TestDataFull, truncThresh);
 
@@ -97,9 +87,4 @@ for i=1:length(TestData)
 end
 
 accuracy = sum(correctGuesses) ./ length(correctGuesses)
-
-
-
-
-
-%%
+end
