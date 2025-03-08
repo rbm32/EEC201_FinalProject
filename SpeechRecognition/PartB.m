@@ -148,20 +148,6 @@ end
 
 suptitle('Before and After Mel-Frequency Warping Spectrum for All Training Speeches (1 frame)');
 
-%% Explanation of the Impact of the melfb Function
-
-% The melfb function builds a bank of overlapping 
-% triangular filters spaced on the mel scale. These filters mimic the frequency 
-% resolution of the human auditory system, which is more sensitive at lower 
-% frequencies and less so at higher frequencies.
-%
-% When you multiply the linear power spectrum of a speech signal by the mel 
-% filter bank, you "warp" the spectrum onto the mel scale. This process:
-%
-%   - Aggregates energy in frequency bands that follow human auditory perception.
-%   - Compresses the higher frequency details (which are less perceptually critical).
-%   - Emphasizes lower frequencies where the ear is more sensitive.
-
 %% Test 4 %%
 nc = 13;  % number of cepstral coefficients to keep
 figure('Position', [50, 50, 1600, 1000]);

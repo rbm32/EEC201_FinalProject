@@ -20,7 +20,7 @@ function C = mfcc_frames(signal, fs_signal, fs_mel, p, n, nc, frameLen, overlapL
 %
 %   Notes:
 %       This function extracts all frames (zero-padding the last frame if needed)
-%       and for each frame applies a Hamming window before calling the mfcc function.
+%       and for each frame applies a Kaiser window before calling the mfcc function.
     
     % If necessary, resample the entire signal so that its sampling rate matches fs_mel.
     if fs_signal ~= fs_mel
@@ -28,7 +28,7 @@ function C = mfcc_frames(signal, fs_signal, fs_mel, p, n, nc, frameLen, overlapL
         fs_signal = fs_mel;
     end
     
-    % Determine the step (hop size) and the number of frames (using ceil to include the final frame)
+    % Determine the step and the number of frames
     step = frameLen - overlapLen;
     numFrames = ceil((length(signal) - frameLen) / step) + 1;
     
@@ -39,7 +39,7 @@ function C = mfcc_frames(signal, fs_signal, fs_mel, p, n, nc, frameLen, overlapL
         C = zeros(nc-1, numFrames);
     end
     
-    % Create a Hamming window of length frameLen
+    % Create a Kaiser window of length frameLen
     w = kaiser(frameLen, 2.5);
     
     % Process each frame
@@ -55,13 +55,12 @@ function C = mfcc_frames(signal, fs_signal, fs_mel, p, n, nc, frameLen, overlapL
             frame = signal(startIdx:endIdx);
         end
         
-        % Apply the Hamming window
+        % Apply the window
         frame = frame .* w;
         
-        % Compute MFCC vector for the frame using the mfcc function
+        % Compute MFCC vector for the frame
         c = mfcc(frame, fs_signal, fs_mel, p, n, nc, keepfirst);
         
-        % Store the computed MFCC vector in the output matrix
         C(:, i) = c;
     end
 end

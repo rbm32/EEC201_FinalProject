@@ -12,7 +12,7 @@ n             = 256;     % FFT length
 nc            = 30;      % Number of MFCC coefficients to keep
 frameLen      = 256;     % Frame length in samples
 overlap       = 128;     % Overlap between frames (in samples)
-numCodewords  = 7;       % Desired number of VQ codewords per speaker
+numCodewords  = 8;       % Desired number of VQ codewords per speaker
 epsilon       = 0.0001;    % Splitting factor for the LBG algorithm
 distortionThreshold = 0.000001;
 keepfirst      = false;
@@ -119,11 +119,5 @@ for nf = 1:length(notchFrequencies)
     acc = sum(predictedLabelsNotch == trueLabels) / numTest;
     notchAccuracies(nf) = acc;
     fprintf('Notch Frequency %d Hz: Test Accuracy = %.2f%%\n', notchFreq, acc*100);
-end
-
-fprintf('\nSummary of Recognition Accuracy:\n');
-fprintf('Original Unfiltered: %.2f%%\n', origAccuracy*100);
-for nf = 1:length(notchFrequencies)
-    fprintf('Notch Filter @ %d Hz: %.2f%%\n', notchFrequencies(nf), notchAccuracies(nf)*100);
 end
 

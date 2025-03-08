@@ -1,5 +1,4 @@
 function m = melfb(p, n, fs)
-% MELFB_own Determine matrix for a mel-spaced filterbank
 %
 %   m = melfb_own(p, n, fs) returns a sparse matrix m of size 
 %   [p, 1+floor(n/2)] containing the amplitudes for a mel-spaced filterbank.
@@ -52,7 +51,7 @@ pm = pf - fp;
 
 % Construct the row (r) and column (c) indices for the nonzero filterbank entries.
 % The first part (rising slope) uses bins b2 to b4, and the second part (falling slope)
-% uses bins 1 to b3. Note: '+1' is added for MATLAB's 1-indexing.
+% uses bins 1 to b3.
 r = [fp(b2:b4)  1 + fp(1:b3)];
 c = [b2:b4  1:b3] + 1;
 

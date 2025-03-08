@@ -19,13 +19,9 @@ function speakerCodebook = computeSpeakerCodebooks(trainFolder, fs_mel, p, n, nc
 %                         for one speaker.
 %
 %   This function loads training data, truncates the speech signals using a threshold,
-%   computes MFCC frames for each speaker (using mfcc_frames, which internally calls mfcc),
-%   and then trains a VQ codebook for each speaker using the LBG algorithm.
+%   computes MFCC frames for each speaker, and then trains a VQ codebook for each speaker using the LBG algorithm.
 
-    % Load training data (assumes loadSpeechData exists)
     [speechFiles, speechData, speechData_norm, freqData] = loadSpeechData(trainFolder);
-    
-    % Truncate the signals based on a threshold (assumes truncateVectorByThreshold exists)
     speechData_trunc = truncateVectorByThreshold(speechData_norm, 0.2);
     
     % Initialize the cell array to store each speaker's MFCC frames and codebook
@@ -36,16 +32,10 @@ function speakerCodebook = computeSpeakerCodebooks(trainFolder, fs_mel, p, n, nc
         fs_speech = freqData{i};
         
         % Compute MFCC frames for the current speaker.
-        % The function mfcc_frames uses the mfcc function internally.
         C = mfcc_frames(speech, fs_speech, fs_mel, p, n, nc, frameLen, overlap);
-        
-        % Transpose C so that each row is a frame (i.e., a feature vector)
         C = C';
         
-        % Train the VQ codebook for this speaker's MFCC frames
         codebook = trainVQCodebook(C, numCodewords, epsilon);
-        
-        % Save the codebook for this speaker in the cell array
         speakerCodebook{i} = codebook;
     end
 end

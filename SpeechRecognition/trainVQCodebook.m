@@ -39,7 +39,7 @@ function codebook = trainVQCodebook(features, numCodewords, epsilon, distortionT
         end
         codebook = newCodebook;  % Now we have doubled the codebook size
         
-        % --- Step 3 & 4: Lloyd's Iterations (Assignment & Update) ---
+        % --- Step 3 & 4: Iterations (Assignment & Update) ---
         prevDistortion = Inf;
         while true
             % Assign each feature vector to the nearest codeword
