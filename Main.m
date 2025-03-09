@@ -1,100 +1,24 @@
-%% EEC 201 Final Project
+clear; clc; close all;
+addpath("SpeechRecognition");
+addpath("Functions");
 
-%% Download the speach files
+fs_mel        = 12500;   % Sampling rate used for mel filter bank
+p             = 50;      % Number of mel filters
+n             = 256;     % FFT length
+nc            = 20;      % Number of MFCC coefficients to keep
+frameLen      = 256;     % Frame length in samples
+overlap       = 128;     % Overlap between frames (in samples)
+numCodewords  = 8;       % Desired number of VQ codewords per speaker
+epsilon       = 0.0001;    % Splitting factor for the LBG algorithm
+distortionThreshold = 0.000001;
+keepfirst = false; % Whether or not keep the first MFCC coefficient
 
-playAudioRecording = false; % Set to TRUE if you want to hear all audio recordings played
+trainFolder = 'Data/2024StudentAudioRecording/Zero-Training';
+testFolder = 'Data/2024StudentAudioRecording/Zero-Testing';
+speakerCodebook = trainSpeakerRecognition(trainFolder, fs_mel, p, n, nc, frameLen, overlap, numCodewords, epsilon, distortionThreshold, keepfirst);
+[predictedLabels1, trueLabels1, Accuracy1] = testSpeakerRecognition(testFolder, fs_mel, p, n, nc, frameLen, overlap, speakerCodebook, keepfirst);
 
-% Get a list of all .wav files in the folder
-Fs = 12500; % standard recording frequency
-Ts = 1/Fs;
-% note that the readAudioFromFolder function only keeps one audio channel
-[TrainDataFull, trainSpeakers] = readAudioFromFolder('Speach_Data_2024\Training_Data');
-[TestDataFull, testSpeakers] = readAudioFromFolder('Speach_Data_2024\Test_Data');
-
-
-
-
-% play Training Data
-if playAudioRecording
-    for i = 1:length(TrainData)
-        audioPlayer = audioplayer(TrainData{i},Fs);
-        playblocking(audioPlayer)
-    end
-    
-    % play Test Data
-    for i = 1:length(TestData)
-        audioPlayer = audioplayer(TestData{i},Fs);
-        playblocking(audioPlayer)
-    end
-end
-
-
-%%
-%% Parameters
-N_frame = 128;              % length of each frame
-Win = kaiser(N_frame, .5);  % Window function
-K = 10;                     % number of mel coefficients 
-Nover = round(N_frame/3);   % amount of overlap for each frame
-M=7;                        % Number of codewords
-truncThresh = .2;           % Threshold to truncate the time-domain signals
-iter = 5e3;                 % max number of iterations to perform on the LBG algorithm
-eps = .00001;               % error threshold for the LBG algorithm
-%%
-
-TrainData = truncateVectorByThreshold(TrainDataFull, truncThresh);
-TestData = truncateVectorByThreshold(TestDataFull, truncThresh);
-
-%%
-MFCCtrain = {};
-MFCCtest = {};
-for i = 1:length(TrainData)
-    MFCCtrain{i} = generateMFCC(TrainData{i}, K, Win, N_frame, Nover, Fs, PlotSpectrogram=false, PlotMelFilterBank=false);
-end
-
-for i = 1:length(TestData)
-    MFCCTest{i} = generateMFCC(TestData{i}, K, Win, N_frame, Nover, Fs, PlotSpectrogram=false, PlotMelFilterBank=false);
-end
-
-
-%% Generate a codebook for each speaker
-CBtrain = {};
-CBtest = {};
-
-for i = 1:length(MFCCtrain)
-    CBtrain{i} = trainVQ_LBG(MFCCtrain{i}, M, iter, eps);
-end
-
-
-for i = 1:length(MFCCtest)
-    CBtest{i} = trainVQ_LBG(MFCCtest{i}, K-1, iter, eps);
-end
-
-% Compare MFCC between two speakers
-speaker1 = 1;
-speaker2 = 2;
-coefIdx1 = 1;
-coefIdx2 = 2;
-
-melCepstrum1 = MFCCtrain{speaker1};
-melCepstrum2 = MFCCtrain{speaker2};
-
-codebook1 = CBtrain{speaker1};
-codebook2 = CBtrain{speaker2};
-
-
-% uncomment this if you want to see the 2d clustering of the mel
-% coefficients
-
-% plotMelCepstrumWithVQ(melCepstrum1, melCepstrum2, codebook1, codebook2, coefIdx1, coefIdx2);
-
-%% Attempt to identify the speaker
-
-correctGuesses = [];
-identifiedSpeaker = [];
-for i=1:length(TestData)
-    [identifiedSpeaker(i)] = findBestCodebook(MFCCtrain{i}, CBtrain);
-    correctGuesses(i) = identifiedSpeaker(i) == i;
-end
-
-accuracy = sum(correctGuesses) ./ length(correctGuesses)
-
+trainFolder = 'Data/2024StudentAudioRecording/Twelve-Training';
+testFolder = 'Data/2024StudentAudioRecording/Twelve-Testing';
+speakerCodebook = trainSpeakerRecognition(trainFolder, fs_mel, p, n, nc, frameLen, overlap, numCodewords, epsilon, distortionThreshold, keepfirst);
+[predictedLabels2, trueLabels2, Accuracy2] = testSpeakerRecognition(testFolder, fs_mel, p, n, nc, frameLen, overlap, speakerCodebook, keepfirst);

@@ -21,20 +21,9 @@ function [s, f, tf] = Create_Spectrogram(TestData, W, N, Nover, Fs, show_plt)
     t = (0:length(data)-1) / Fs;
 
     if show_plt
-        figure
-        tiledlayout("vertical");
 
-        % Time Domain Plot
-        nexttile;
-        plot(t, data, 'LineWidth', 1.5);
-        xlabel("Time (s)", 'FontSize', 16);
-        ylabel("Amplitude", 'FontSize', 16);
-        title("Time Domain Data", 'FontSize', 25);
-        xlim([t(1), t(end)]);
-        grid on;
 
         % Spectrogram Plot
-        nexttile;
         imagesc(tf, f, 20 * log10(abs(s) + eps)); % Added eps to avoid log of zero
         axis xy;
         colormap(jet);
