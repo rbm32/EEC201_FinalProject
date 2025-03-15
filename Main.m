@@ -2,16 +2,21 @@ clear; clc; close all;
 addpath("SpeechRecognition");
 addpath("Functions");
 
-fs_mel        = 12500;   % Sampling rate used for mel filter bank
-p             = 50;      % Number of mel filters
-n             = 256;     % FFT length
-nc            = 30;      % Number of MFCC coefficients to keep
-frameLen      = 256;     % Frame length in samples
-overlap       = 128;     % Overlap between frames (in samples)
-numCodewords  = 8;       % Desired number of VQ codewords per speaker
-epsilon       = 0.0001;    % Splitting factor for the LBG algorithm
-distortionThreshold = 0.000001;
+fs_mel       = 12500;  % Sampling rate used for mel filter bank
+p            = 50;     % Number of mel filters
+n            = 512;    % FFT length
+nc           = 40;     % Number of MFCC coefficients to keep
+frameLen     = 256;    % Frame length in samples
+overlap      = 128;    % Overlap between frames (in samples)
+numCodewords = 8;      % Desired number of VQ codewords per speaker
+epsilon      = 0.0001; % Splitting factor for the LBG algorithm
+distortionThreshold = 0.000001; % Convergence Threshold for the LBG algorithm
 keepfirst = false; % Whether or not keep the first MFCC coefficient
+
+trainFolder = 'Data/Speach_Data_2024/Training_Data';
+testFolder = 'Data/Speach_Data_2024/Test_Data';
+speakerCodebook = trainSpeakerRecognition(trainFolder, fs_mel, p, n, nc, frameLen, overlap, numCodewords, epsilon, distortionThreshold, keepfirst);
+[predictedLabels0, trueLabels0, Accuracy0] = testSpeakerRecognition(testFolder, fs_mel, p, n, nc, frameLen, overlap, speakerCodebook, keepfirst);
 
 trainFolder = 'Data/2024StudentAudioRecording/Zero-Training';
 testFolder = 'Data/2024StudentAudioRecording/Zero-Testing';

@@ -33,30 +33,63 @@ for i = 1:length(speechFiles)
 end
 
 % Plot MFCC coefficient 2 vs. MFCC coefficient 3
-clr = hsv(length(speechFiles));
+numSpeakersToPlot = min(4, length(speechFiles));
+clr = hsv(numSpeakersToPlot);
+% clr = hsv(length(speechFiles));
 figure('Position', [50, 50, 1600, 1000]);
-gscatter(allMFCC(:,1), allMFCC(:,2), speakerLabels, clr);
+hold on; grid on;
+
+for i = 1:numSpeakersToPlot
+    idx = (speakerLabels == i);
+    scatter(allMFCC(idx, 1), allMFCC(idx, 2), 50, clr(i, :), 'filled');
+end
+
+% Labels and title
 xlabel('MFCC Coefficient 2');
 ylabel('MFCC Coefficient 3');
-title('Acoustic Space');
-grid on;
-hold on;
+title('Acoustic Space for First 4 Speakers');
+legend(arrayfun(@(x) sprintf('Speaker %d', x), 1:numSpeakersToPlot, 'UniformOutput', false));
+hold off;
 
 %% Test 6 %%
 numCodewords = 8;   % desired number of VQ codewords
 epsilon = 0.01;     % splitting factor
 speakerCodebook = cell(length(speechFiles), 1);
-for i = 1:length(speechFiles)
+figure('Position', [50, 50, 1600, 1000]);
+hold on; grid on;
+
+for i = 1:numSpeakersToPlot
+    idx = (speakerLabels == i);
+    scatter(allMFCC(idx, 1), allMFCC(idx, 2), 50, clr(i, :), 'filled');
+end
+
+% Labels and title
+xlabel('MFCC Coefficient 2');
+ylabel('MFCC Coefficient 3');
+title('Acoustic Space for First 4 Speakers');
+legend(arrayfun(@(x) sprintf('Speaker %d', x), 1:numSpeakersToPlot, 'UniformOutput', false));
+
+for i = 1:numSpeakersToPlot
     spMFCC = speakerMFCCs{i};  % MFCC frames for speaker i
     if isempty(spMFCC)
         continue;
     end
+    
     % Train the VQ codebook for this speaker's MFCC vectors.
     codebook = trainVQCodebook(spMFCC, numCodewords, epsilon, distortionThreshold);
-    
-    scatter(codebook(:,1), codebook(:,2), 100, 'x', 'LineWidth', 1, 'MarkerEdgeColor', clr(i, :), 'DisplayName', sprintf('Codebook %d', i));
     speakerCodebook{i} = codebook;
+    
+    % Scatter plot for codebook centroids
+    scatter(codebook(:,1), codebook(:,2), 100, 'x', 'LineWidth', 1.5, ...
+        'MarkerEdgeColor', clr(i, :), 'DisplayName', sprintf('Codebook %d', i));
 end
+
+% Labels and title
+xlabel('MFCC Coefficient 2');
+ylabel('MFCC Coefficient 3');
+title('VQ Codebook for First 4 Speakers');
+legend show;
+hold off;
 
 
 hold off;
