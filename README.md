@@ -1,9 +1,18 @@
-<div style="text-align: center;">
+<div align="center">
+
+# Speech Recognition
+
+### Ryan Bruch, Haodong Liang
+
+### March 14, 2025
+
+</div>
+<!-- <div style="text-align: center;">
   <h1 style="font-size: 40px;">Speech Recognition</h1>
   <h2>Ryan Bruch, Haodong Liang</h2>
   <h3>March 14, 2025</h3>
-</div>
-<style>
+</div> -->
+<!-- <style>
     h1, h2, h3 {
     border-bottom: none !important;
   }
@@ -17,7 +26,7 @@
     h1 { font-size: 30px; }
     h2 { font-size: 24px; }
     h3 { font-size: 18px; }
-</style>
+</style> -->
 
 # Background
 Speech recognition is the process of identifying a speaker based on the information encoded in the sound waves of their speech. This technology is ubiquitous in modern technology, especially with the rise of voice-controlled assistants. The goal of this project is to develop a simple yet effective method of speaker recognition using Digital Signal Processing Techniques. This will be accomplished in two phases: training and testing. In the training phase, speech samples from known speakers will be used to create a codebook with each speaker's unique voice profile. In the testing phase, the system will analyze speech from an unknown speaker, extract the key features, and match them against the stored codebooks to identify the speaker.
@@ -50,7 +59,7 @@ Human speech signal can be considered as stationary within a short period of tim
 </figure>
 
 <figure>
-  <img src="images/stft_N=512.png" alt="Optional Title" title="Optional Title" width="800">
+  <img src="images/STFT_N=512.png" alt="Optional Title" title="Optional Title" width="800">
    <figcaption>Figure 4: STFT with window size 512.</figcaption>
 </figure> 
 
@@ -65,14 +74,14 @@ These triangular-shaped filters are linearly spaced below 1000 Hz and logarithmi
 
 <figure>
   <img src="images/Mel-wrapping.png" alt="Optional Title" title="Optional Title" width="800">
-   <figcaption>Figure 5: Mel-spaced filter bank response, with number of filters p=20.</figcaption>
+   <figcaption>Figure 6: Mel-spaced filter bank response, with number of filters p=20.</figcaption>
 </figure> 
 
 Next, the Mel-Frequency Cepstral Coefficients (MFCC) were computed for each frame. The MFCCs are the Discrete Cosine Transform (DCT) of the mel spectrum coefficients. Below we show the MFCC of a single frame.
 
 <figure>
   <img src="images/mfcc.png" alt="Optional Title" title="Optional Title" width="800">
-   <figcaption>Figure 5: Mel-spaced filter bank response, with number of filters p=20.</figcaption>
+   <figcaption>Figure 7: Mel-spaced filter bank response, with number of filters p=20.</figcaption>
 </figure> 
 
 In the following analysis, we take out the first component of MFCC as it represents the magnitude of the signal. 
@@ -81,7 +90,7 @@ The effectiveness of this method can be seen by plotting the MFCCs of multiple d
 
 <figure>
   <img src="images/AcousticSpace.png" alt="Optional Title" title="Optional Title" width="800">
-   <figcaption>Figure 6: Acoustic Space (MFCC coefficient for different speakers).</figcaption>
+   <figcaption>Figure 8: Acoustic Space (MFCC coefficient for different speakers).</figcaption>
 </figure> 
 
 As it can be seen from the figure, each speaker is likely to form a separate cluster of MFCC coefficients in the acoustic space. 
@@ -90,7 +99,7 @@ Next, we applied Vector Quantization (VQ) to create a codebook for each speaker.
 
 <figure>
   <img src="images/AcousticSpaceVQ.png" alt="Optional Title" title="Optional Title" width="800">
-   <figcaption>Figure 7: VQ codebooks for each speaker in acoustic space.</figcaption>
+   <figcaption>Figure 9: VQ codebooks for each speaker in acoustic space.</figcaption>
 </figure> 
 
 In order to identify an unknown speaker, we can extract the MFCCs from a speech sample and compare them to the codebook of each known speaker. For each codebook, the model will find the total amount of distortion (measured in Euclidean distance) required to map each codeword to its nearest data point. Then, the speaker associated with the codebook that yielded the smallest distortion will be selected as the recognized speaker. 
