@@ -1,11 +1,20 @@
 clear; clc; close all;
+addpath("Functions\")
+addpath("SpeechRecognition\")
 
+idx = [1 2 3 4]
 %% Test2 %%
-trainFolder = 'GivenSpeech_Data/Training_Data';  
-testFolder  = 'GivenSpeech_Data/Test_Data';   
+trainFolder = 'Data\2025StudentAudioRecording\Five Training';  
+testFolder  = 'Data\2025StudentAudioRecording\Five Test';   
 
 %% Load training data
-[speechFiles, speechData, speechData_norm, freqData] = loadSpeechData(trainFolder);
+[speechFilesFull, speechDataFull, speechData_normFull, freqDataFull] = loadSpeechData(trainFolder);
+
+speechFiles = speechFilesFull(idx);
+speechData = speechDataFull(idx);
+speechData_norm = speechData_normFull(idx);
+freqData = freqDataFull(idx);
+
 speechData_trunc = truncateVectorByThreshold(speechData_norm, 0.2);
 %% Time-domain plotting
 figure;
@@ -14,14 +23,14 @@ for i = 1:length(speechFiles)
     s = speechData{i};
     fs = freqData{i};
     t = (0:length(s)-1) / fs;
-    nexttile;
+    nexttile
     plot(t, s);
     title(sprintf('Wave %s', speechFiles(i).name));
     xlabel('Time (s)');
     ylabel('Amplitude');
     ylim([-2,2]);
 end
-sgtitle('Time-Domain Speech Signals (Training Data)', FontSize=30);
+sgtitle('Time-Domain Speech Signals (Training Data)');
 
 % Normalized signal
 figure;
@@ -30,14 +39,14 @@ for i = 1:length(speechFiles)
     s = speechData_norm{i};
     fs = freqData{i};
     t = (0:length(s)-1) / fs;
-    nexttile;
+    nexttile
     plot(t, s);
     title(sprintf('Wave %s', speechFiles(i).name));
     xlabel('Time (s)');
     ylabel('Amplitude');
     ylim([-2,2]);
 end
-sgtitle('Normalized Time-Domain Speech Signals (Training Data)', FontSize=30);
+sgtitle('Normalized Time-Domain Speech Signals (Training Data)');
 
 % Truncated signal
 figure;
@@ -46,14 +55,14 @@ for i = 1:length(speechFiles)
     s = speechData_trunc{i};
     fs = freqData{i};
     t = (0:length(s)-1) / fs;
-    nexttile;
+    nexttile
     plot(t, s);
-    title(sprintf('Wave %s', speechFiles(i).name), FontSize=30);
+    title(sprintf('Wave %s', speechFiles(i).name));
     xlabel('Time (s)');
     ylabel('Amplitude');
     ylim([-2,2]);
 end
-sgtitle('Truncated Time-Domain Speech Signals (Training Data)', FontSize=30);
+% sgtitle('Truncated Time-Domain Speech Signals (Training Data)');
 
 %% Use STFT to generate spectrogram
 frameSizes = [128, 256, 512];
@@ -63,6 +72,7 @@ for k = 1:length(frameSizes)
     M = round(N/3);       % Frame increment
     
     figure('Position', [50, 50, 1400, 800]);
+    tiledlayout('flow');
     
     for i = 1:length(speechFiles)
         s = speechData_trunc{i};
@@ -83,7 +93,7 @@ for k = 1:length(frameSizes)
         t = ((0:numFrames-1)*M + N/2) / fs;
         f = linspace(0, fs/2, floor(nfft/2)+1);
       
-        subplot(3, 4, i);
+        nexttile
         imagesc(t, f, S);
         axis xy;
         cb = colorbar;
@@ -113,16 +123,10 @@ grid on;
 
 %% Compute and Plot Spectrum Before and After Mel-Frequency Warping
 figure('Position', [50, 50, 1600, 1000]);
-
+tiledlayout('flow');
 for i = 1:length(speechFiles)
-    subplot(4, 3, i);
+    nexttile;;
     speech = speechData_trunc{i};
-    fs_speech = freqData{i};
-    
-    % Resample if the speech file's sampling rate differs from fs_mel
-    if fs_speech ~= fs
-        speech = resample(speech, fs_mel, fs);
-    end
     
     % Compute the FFT using n points and obtain the power spectrum (only half + DC)
     S = fft(speech, n);
@@ -149,14 +153,15 @@ for i = 1:length(speechFiles)
     legend('Original Spectrum', 'Mel-Wrapped Spectrum', 'Location', 'best');
 end
 
-subtitle('Before and After Mel-Frequency Warping Spectrum for All Training Speeches (1 frame)');
+% subtitle('Before and After Mel-Frequency Warping Spectrum for All Training Speeches (1 frame)');
 
 %% Test 4 %%
 nc = 13;  % number of cepstral coefficients to keep
 figure('Position', [50, 50, 1600, 1000]);
 
+tiledlayout('flow')
 for i = 1:length(speechFiles)
-    subplot(4, 3, i);
+    nexttile;
     
     speech = speechData_trunc{i};
     fs_speech = freqData{i};
@@ -168,4 +173,62 @@ for i = 1:length(speechFiles)
     ylabel('Amplitude');
     grid on;
 end
-suptitle('MFCCs for Each Training Speech (1 frame)');
+subtitle('MFCCs for Each Training Speech (1 frame)');
+
+
+%% Test 5 %%
+
+% Parameters for mel filter bank
+fs_mel = 12500;    % Sampling rate for mel frequency banks
+p = 20;            % Number of mel filters
+n = 256;           % FFT length
+nc = 20;           % Number of MFCC coefficients to keep
+frameLen = 256;    % Length for each window
+overlap = 128;     % Overlap between windows
+keepfirst = false; % Wheter or not keep the first MFCC coefficient
+distortionThreshold = 0.00001;
+m = melfb(p, n, fs_mel);  
+allMFCC = [];
+speakerLabels = [];
+speakerMFCCs = cell(length(speechFiles), 1);
+
+for i = 1:length(speechData_trunc)
+    speech = speechData_trunc{i};
+    fs_speech = freqData{i};
+    C = mfcc_frames(speech, fs_speech, fs_mel, p, n, nc, frameLen, overlap, keepfirst);
+    C = C';
+    allMFCC = [allMFCC; C];
+    numFrames = size(C, 1);
+    speakerLabels = [speakerLabels; repmat(i, numFrames, 1)];
+    speakerMFCCs{i} = C;
+end
+
+% Plot MFCC coefficient 2 vs. MFCC coefficient 3
+clr = hsv(length(speechFiles));
+figure('Position', [50, 50, 1600, 1000]);
+gscatter(allMFCC(:,1), allMFCC(:,2), speakerLabels, clr);
+legend("Speaker "+unique(speakerLabels));
+xlabel('MFCC Coefficient 2');
+ylabel('MFCC Coefficient 3');
+title('Acoustic Space');
+grid on;
+hold on;
+
+%% Test 6 %%
+numCodewords = 8;   % desired number of VQ codewords
+epsilon = 0.01;     % splitting factor
+speakerCodebook = cell(length(speechFiles), 1);
+for i = 1:length(speechFiles)
+    spMFCC = speakerMFCCs{i};  % MFCC frames for speaker i
+    if isempty(spMFCC)
+        continue;
+    end
+    % Train the VQ codebook for this speaker's MFCC vectors.
+    codebook = trainVQCodebook(spMFCC, numCodewords, epsilon, distortionThreshold);
+    
+    scatter(codebook(:,1), codebook(:,2), 1000, 'x', 'LineWidth', 1, 'MarkerEdgeColor', clr(i, :), 'DisplayName', sprintf('Codebook %d', i));
+    speakerCodebook{i} = codebook;
+end
+
+
+hold off;
