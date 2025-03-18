@@ -104,40 +104,41 @@ Next, we applied Vector Quantization (VQ) to create a codebook for each speaker.
 
 In order to identify an unknown speaker, we can extract the MFCCs from a speech sample and compare them to the codebook of each known speaker. For each codebook, the model will find the total amount of distortion (measured in Euclidean distance) required to map each codeword to its nearest data point. Then, the speaker associated with the codebook that yielded the smallest distortion will be selected as the recognized speaker. 
 
-# Testing the model
+We tested the model on a small dataset to confirm that it is working. The dataset consisted of the speech signal "Zero" for 8 different speakers. The model was initialized with reasonable parameters and was able to correctly identify 7/8 speakers, resulting in a 87.5% accuracy and proving that the model was functioning correctly
 
-The parameters we used for our model are as follows:
+# Optimizing the model
+
+The next step was to optimize the parameters of the model. We had two more datasets available: the "Zero" and "Twelve" speech signals from 2024 and "Five" and "Eleven" from 2025. Our approach was to first create a script that would loop through several different values of each parameter and test the resulting accuracy of our system on all data available. The top performing parameters from this method were then fed into a genetic algorithm in MATLAB to further optimize their performance. The best performing set of parameters was found to be:
+
 
 ```matlab
 fs_mel       = 12500;  % Sampling rate used for mel filter bank
-p            = 50;     % Number of mel filters
-n            = 512;    % FFT length
-nc           = 40;     % Number of MFCC coefficients to keep
-frameLen     = 256;    % Frame length in samples
-overlap      = 128;    % Overlap between frames (in samples)
-numCodewords = 8;      % Desired number of VQ codewords per speaker
+p            = 62;     % Number of mel filters
+n            = 1024;    % FFT length
+nc           = 27;     % Number of MFCC coefficients to keep
+frameLen     = 355;    % Frame length in samples
+overlap      = 232;    % Overlap between frames (in samples)
+numCodewords = 30;      % Desired number of VQ codewords per speaker
 epsilon      = 0.0001; % Splitting factor for the LBG algorithm
 distortionThreshold = 0.000001; % Convergence Threshold for the LBG algorithm
 keepfirst = false; % Whether or not keep the first MFCC coefficient
 ```
 
+## Results
 
-We test our model performance on three different tasks.
-
-## "Zero" speeches
+### "Zero" speeches
 
 This dataset contains the speech signals of "zero" for 8 different speakers. Our model yields 87.5% accuracy on the test set. To test the robustness, we apply 4 different notch filters on the test signals with notch frequencies placed at 800, 1000, 1200, 1400 Hz respectively. All the test accuracies remain at 87.5%, which indicates the system is quite robust.
 
 On top of these 8 speeches, we add 10 student's "zero" speeches from the EEC 2024 students and re-train a new model to recognize these 18 speakers together. The accuracy for this new task is 94.44% on the test set.
 
-## "Zero" and "Twelve" speeches
+### "Zero" and "Twelve" speeches
 
 This dataset contains the speech signals of "zero" and "twelve" of 18 students in the EEC 2024 class. We first try to identify the speakers with "Zero" and "Twelve" signal respectively. The corresponding test accuracies are both 94.44%. Next, we consider a more challenging case where the system in trained to identify a) which speaker, and b) whether the speech is "zero" or "twelve", at the same time. The test accuracy for this whole system remains at 94.44%.
 
-## "Five" and "Eleven" speeches
+### "Five" and "Eleven" speeches
 
 This dataset contains the speech signals of "five" and "eleven" of 23 students in the EEC 2025 class. Similarly, we first identify the speakers with "Five" speech, the resulting test accuracy hits 100%. We then identify the speakers with "Eleven" speech, the resulting test accuracy is also 100%. 
 
 In conclusion, our model is capable of identifying different speakers with high accuracy and good robustness.
-
 
