@@ -17,6 +17,7 @@ numCodewords_values  = [8 10 12 14 16];  % Number of VQ codewords per speaker
 
 % Define training and testing folders
 datasets = {
+    {'Data/Speach_Data_2024/Training_Data', 'Data/Speach_Data_2024/Test_Data'},
     {'Data/2024StudentAudioRecording/Zero-Training', 'Data/2024StudentAudioRecording/Zero-Testing'},
     {'Data/2024StudentAudioRecording/Twelve-Training', 'Data/2024StudentAudioRecording/Twelve-Testing'},
     {'Data/2025StudentAudioRecording/Five Training', 'Data/2025StudentAudioRecording/Five Test'},
@@ -114,7 +115,7 @@ end
 close(h);
 
 % Save results as MAT file
-save('SpeakerRecognitionResults.mat', 'resultsTable');
+save('OptimizationResults\SpeakerRecognitionResults.mat', 'resultsTable');
 
 disp('Parameter sweep completed. Results saved.');
 
@@ -125,7 +126,7 @@ if ~isempty(bestIdx)
     disp(bestParameters);
     
     % Save best result separately
-    save('BestSpeakerRecognitionResult.mat', 'bestParameters');
+    save('OptimizationResults\BestSpeakerRecognitionResult.mat', 'bestParameters');
 end
 
 %% Genetic Algorithm Approach
@@ -138,8 +139,8 @@ addpath("Functions");
 numParams = 6;  % (p, n, nc, frameLen, overlap, numCodewords)
 
 % Define the lower and upper bounds for each parameter
-lb = [40, 128, 20, 128, 56, 20];    % Lower bounds (integers)
-ub = [70, 1024, 50, 512, 256, 40];   % Upper bounds (integers)
+lb = [40, 128, 10, 128, 128, 5];    % Lower bounds (integers)
+ub = [60, 1000, 30, 512, 256, 50];   % Upper bounds (integers)
 
 % Ensure integer constraints for GA
 intCon = 1:numParams;  % All parameters must be integers
@@ -159,7 +160,7 @@ end
 initialPopulation = [specific_initial_guess; random_pop];
 
 % Define the fitness function (minimize negative accuracy)
-fitnessFcn = @(x) -evaluateParameters(x(1), x(2), x(3), x(4), x(5), x(6));
+fitnessFcn = @(x) evaluateParameters(x(1), x(2), x(3), x(4), x(5), x(6));
 
 % Open parallel pool if not already open
 if isempty(gcp('nocreate'))
@@ -169,14 +170,15 @@ end
 % Set GA options, including the initial population
 options = optimoptions('ga', ...
     'PopulationSize', 15, ... % Reduce total population size
-    'MaxGenerations', 50, ... % Reduce max generations for efficiency
+    'MaxGenerations', 80, ... % Reduce max generations for efficiency
     'EliteCount', 7, ... % Preserve top 7 candidates each generation
-    'CrossoverFraction', 0.85, ... % Increase crossover fraction
+    'CrossoverFraction', 0.2, ... % Increase crossover fraction
     'MutationFcn', {@mutationadaptfeasible, 0.2}, ... % Reduce mutation rate
     'SelectionFcn', @selectiontournament, ... % Tournament selection
     'Display', 'iter', ...
     'UseParallel', true, ...
     'InitialPopulationMatrix', initialPopulation); % Ensure correct first guesses
+
 
 % Run Genetic Algorithm Optimization
 [bestParams, bestAccuracy] = ga(fitnessFcn, numParams, [], [], [], [], lb, ub, [], intCon, options);
@@ -186,7 +188,7 @@ bestParamsTable = table(bestParams(1), bestParams(2), bestParams(3), bestParams(
     'VariableNames', {'p', 'n', 'nc', 'frameLen', 'overlap', 'numCodewords', 'Total_Accuracy'});
 
 % Save to .mat file
-save('BestGAParameters.mat', 'bestParamsTable');
+save('OptimizationResults\\BestGAParameters.mat', 'bestParamsTable');
 
 % Display Best Found Parameters
 fprintf('\n=== Best Parameters Found ===\n');
@@ -194,6 +196,70 @@ fprintf('p = %d, n = %d, nc = %d, frameLen = %d, overlap = %d, numCodewords = %d
         bestParams(1), bestParams(2), bestParams(3), bestParams(4), bestParams(5), bestParams(6));
 fprintf('Best Accuracy Achieved: %.4f\n', -bestAccuracy);
 fprintf('Best parameters have been saved in BestGAParameters.mat\n');
+
+%%
+% Define parameters
+fs_mel       = 12500;  % Sampling rate used for mel filter bank
+
+epsilon      = 0.0001; % Splitting factor for the LBG algorithm
+distortionThreshold = 0.000001; % Convergence Threshold for the LBG algorithm
+keepfirst = false; % Whether or not keep the first MFCC coefficientt
+if ~isempty(bestParams)
+    p            = bestParams(1);
+    n            = bestParams(2);
+    nc           = bestParams(3);
+    frameLen     = bestParams(4);
+    overlap      = bestParams(5);
+    numCodewords = bestParams(6);
+end
+% Initialize counters
+totalCorrect = 0;
+totalSamples = 0;
+
+% Dataset paths
+datasets = {
+    {'Data/Speach_Data_2024/Training_Data', 'Data/Speach_Data_2024/Test_Data'};
+    {'Data/2024StudentAudioRecording/Zero-Training', 'Data/2024StudentAudioRecording/Zero-Testing'};
+    {'Data/2024StudentAudioRecording/Twelve-Training', 'Data/2024StudentAudioRecording/Twelve-Testing'};
+    {'Data/2025StudentAudioRecording/Five Training', 'Data/2025StudentAudioRecording/Five Test'};
+    {'Data/2025StudentAudioRecording/Eleven Training', 'Data/2025StudentAudioRecording/Eleven Test'}
+};
+
+% Loop through each dataset
+for i = 1:length(datasets)
+    trainFolder = datasets{i}{1};
+    testFolder = datasets{i}{2};
+
+    % Train speaker recognition model
+    speakerCodebook = trainSpeakerRecognition(trainFolder, fs_mel, p, n, nc, frameLen, overlap, numCodewords, epsilon, distortionThreshold, keepfirst);
+
+    % Test speaker recognition model
+    [predictedLabels, trueLabels, Accuracy] = testSpeakerRecognition(testFolder, fs_mel, p, n, nc, frameLen, overlap, speakerCodebook, keepfirst);
+
+    % Compute correct predictions and update counters
+    correctPredictions = sum(predictedLabels == trueLabels);
+    numSamples = length(trueLabels);
+
+    totalCorrect = totalCorrect + correctPredictions;
+    totalSamples = totalSamples + numSamples;
+
+    % Display dataset accuracy
+    fprintf('Dataset %d Accuracy: %.2f%% (%d/%d correct)\n', i, Accuracy * 100, correctPredictions, numSamples);
+end
+
+% Compute total accuracy
+if totalSamples > 0
+    totalAccuracy = totalCorrect / totalSamples;
+else
+    totalAccuracy = NaN; % Avoid division by zero
+end
+
+% Display final total accuracy
+fprintf('\n=== Total Accuracy Across All Datasets ===\n');
+fprintf('Total Correct Predictions: %d\n', totalCorrect);
+fprintf('Total Test Samples: %d\n', totalSamples);
+fprintf('Total Accuracy: %.2f%%\n', totalAccuracy * 100);
+
 
 %% Optimized Fitness Function
 type evaluateParameters.m
@@ -214,6 +280,7 @@ function totalAccuracy = evaluateParameters(p, n, nc, frameLen, overlap, numCode
     keepfirst = false;
 
     datasets = {
+        {'Data/Speach_Data_2024/Training_Data', 'Data/Speach_Data_2024/Test_Data'},
         {'Data/2024StudentAudioRecording/Zero-Training', 'Data/2024StudentAudioRecording/Zero-Testing'},
         {'Data/2024StudentAudioRecording/Twelve-Training', 'Data/2024StudentAudioRecording/Twelve-Testing'},
         {'Data/2025StudentAudioRecording/Five Training', 'Data/2025StudentAudioRecording/Five Test'},
@@ -223,14 +290,14 @@ function totalAccuracy = evaluateParameters(p, n, nc, frameLen, overlap, numCode
     accuracies = nan(1, length(datasets));  
     dataset_sizes = zeros(1, length(datasets)); % Preallocate with zeros
 
-    parfor i = 1:length(datasets)
+    for i = 1:length(datasets)
         trainFolder = datasets{i}{1};
         testFolder = datasets{i}{2};
 
         try
             % Train speaker recognition model
             speakerCodebook = trainSpeakerRecognition(trainFolder, fs_mel, p, n, nc, frameLen, overlap, numCodewords, epsilon, distortionThreshold, keepfirst);
-
+            
             % Test speaker recognition model
             [predictedLabels, trueLabels, Accuracy] = testSpeakerRecognition(testFolder, fs_mel, p, n, nc, frameLen, overlap, speakerCodebook, keepfirst);
 
@@ -246,9 +313,10 @@ function totalAccuracy = evaluateParameters(p, n, nc, frameLen, overlap, numCode
     if any(valid_indices)
         totalAccuracy = sum(accuracies(valid_indices) .* dataset_sizes(valid_indices)) / sum(dataset_sizes(valid_indices));
     else
-        totalAccuracy = NaN; % If all values failed, return NaN
+        totalAccuracy = -1e3; % If all values failed, return NaN
     end
-
+    fprintf('Accuracy: %d\n', totalAccuracy);
     totalAccuracy = -totalAccuracy; % Negate for GA minimization
+    
     cache(key) = totalAccuracy; % Store result to avoid recomputation
 end
