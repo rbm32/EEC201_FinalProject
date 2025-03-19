@@ -1,13 +1,28 @@
+%% ========================================================================
+%  EEC 201 Final Project - Individual Speaker Recognition Tests
+%  University of California, Davis
+%
+%  Authors: Haodong Liang and Ryan Bruch
+
+%  Description:
+%  This script allows for the execution of each individual test 
+%  rather than running a full automated training and evaluation pipeline
+
+%  How to Use:
+%  1. Update `trainFolder` and `testFolder` with the correct dataset paths.
+%  2. Adjust the `idx` variable to specify which speech files to process.
+%  3. Run the script to visualize and analyze speaker data.
+%  4. Use the different test sections to debug and fine-tune speaker recognition models.
+
 clear; clc; close all;
 addpath("Functions\")
 addpath("SpeechRecognition\")
 
-idx = [1 2 3 4]
-%% Test2 %%
-trainFolder = 'Data\2025StudentAudioRecording\Five Training';  
-testFolder  = 'Data\2025StudentAudioRecording\Five Test';   
+idx = [1 2 3 4];
+%% Initialize training and testing data
+trainFolder = 'Data/Speach_Data_2024/Training_Data';
+testFolder = 'Data/Speach_Data_2024/Test_Data';
 
-%% Load training data
 [speechFilesFull, speechDataFull, speechData_normFull, freqDataFull] = loadSpeechData(trainFolder);
 
 speechFiles = speechFilesFull(idx);
@@ -16,7 +31,7 @@ speechData_norm = speechData_normFull(idx);
 freqData = freqDataFull(idx);
 
 speechData_trunc = truncateVectorByThreshold(speechData_norm, 0.2);
-%% Time-domain plotting
+%% Test 2
 figure;
 tiledlayout('flow');
 for i = 1:length(speechFiles)
@@ -210,7 +225,7 @@ gscatter(allMFCC(:,1), allMFCC(:,2), speakerLabels, clr);
 legend("Speaker "+unique(speakerLabels));
 xlabel('MFCC Coefficient 2');
 ylabel('MFCC Coefficient 3');
-title('Acoustic Space');
+title('Acoustic Space', fontsize=30);
 grid on;
 hold on;
 
@@ -232,3 +247,179 @@ end
 
 
 hold off;
+
+%% Test 7 and 8 %%
+
+%% Parameters
+fs_mel       = 12500;  % Sampling rate used for mel filter bank
+p            = 50;     % Number of mel filters
+n            = 512;    % FFT length
+nc           = 40;     % Number of MFCC coefficients to keep
+frameLen     = 256;    % Frame length in samples
+overlap      = 128;    % Overlap between frames (in samples)
+numCodewords = 8;      % Desired number of VQ codewords per speaker
+epsilon      = 0.0001; % Splitting factor for the LBG algorithm
+distortionThreshold = 0.000001; % Convergence Threshold for the LBG algorithm
+keepfirst = false; % Whether or not keep the first MFCC coefficient
+
+%% ----------------- Training Phase -----------------
+[speechFiles_train, speechData_train, speechData_norm_train, freqData_train] = loadSpeechData(trainFolder);
+speechData_trunc_train = truncateVectorByThreshold(speechData_norm_train, 0.2);
+numSpeakers = length(speechFiles_train);
+
+% Train a VQ codebook for each speaker
+speakerCodebook = cell(numSpeakers, 1);
+for i = 1:numSpeakers
+    speech = speechData_trunc_train{i};
+    fs_speech = freqData_train{i};
+    
+    % Compute MFCC frames (each column is a frame); transpose so each row is one feature vector.
+    C = mfcc_frames(speech, fs_speech, fs_mel, p, n, nc, frameLen, overlap, keepfirst)';
+    
+    % Train VQ codebook using the LBG algorithm
+    codebook = trainVQCodebook(C, numCodewords, epsilon, distortionThreshold);
+    speakerCodebook{i} = codebook;
+end
+
+%% ----------------- Testing Phase on Unfiltered Data -----------------
+[speechFiles_test, speechData_test, speechData_norm_test, freqData_test] = loadSpeechData(testFolder);
+speechData_trunc_test = truncateVectorByThreshold(speechData_norm_test, 0.2);
+numTest = length(speechFiles_test);
+
+predictedLabels = zeros(numTest, 1);
+trueLabels = zeros(numTest, 1);
+
+for i = 1:numTest
+    speech = speechData_trunc_test{i};
+    fs_speech = freqData_test{i};
+    
+    % Compute MFCC frames for test utterance (each row is one feature vector)
+    C = mfcc_frames(speech, fs_speech, fs_mel, p, n, nc, frameLen, overlap, keepfirst)';
+    
+    % Compute average distortion to each speaker's codebook.
+    distortions = zeros(numSpeakers, 1);
+    for sp = 1:numSpeakers
+        cb = speakerCodebook{sp};  % Each row of cb is a codeword.
+        numFramesTest = size(C, 1);
+        totalDist = 0;
+        for j = 1:numFramesTest
+            frame = C(j, :);
+            dists = sqrt(sum((cb - frame).^2, 2));
+            totalDist = totalDist + min(dists);
+        end
+        distortions(sp) = totalDist / numFramesTest;
+    end
+    [~, recognizedSpeaker] = min(distortions);
+    predictedLabels(i) = recognizedSpeaker;
+    
+    trueLabels(i) = i;  
+end
+
+origAccuracy = sum(predictedLabels == trueLabels) / numTest;
+fprintf('Original (Unfiltered) Test Accuracy: %.2f%%\n', origAccuracy*100);
+
+%% ----------------- Testing Phase on Notch-Filtered Data -----------------
+% Define a set of notch filter center frequencies (in Hz)
+notchFrequencies = [800, 1000, 1200, 1400];
+notchAccuracies = zeros(length(notchFrequencies), 1);
+
+for nf = 1:length(notchFrequencies)
+    notchFreq = notchFrequencies(nf);
+    % W0: normalized frequency )
+    W0 = notchFreq / (fs_mel/2);  
+    BW = 0.01;
+    [b, a] = iirnotch(W0, BW);
+    fs = 12500;
+    figure;
+    freqz(b, a, 1024, fs);
+    title(sprintf('Notch Filter Frequency Response @ %d Hz', notchFreq));
+    predictedLabelsNotch = zeros(numTest, 1);
+    for i = 1:numTest
+        speech = speechData_trunc_test{i};
+        % Apply the notch filter to the test signal.
+        speechFiltered = filter(b, a, speech);
+        fs_speech = freqData_test{i};
+        
+        % Compute MFCC frames on the notch-filtered signal.
+        C = mfcc_frames(speechFiltered, fs_speech, fs_mel, p, n, nc, frameLen, overlap, keepfirst)';
+        
+        % Compute average distortion to each speaker's codebook.
+        distortions = zeros(numSpeakers, 1);
+        numFramesTest = size(C, 1);
+        for sp = 1:numSpeakers
+            cb = speakerCodebook{sp};
+            totalDist = 0;
+            for j = 1:numFramesTest
+                frame = C(j, :);
+                dists = sqrt(sum((cb - frame).^2, 2));
+                totalDist = totalDist + min(dists);
+            end
+            distortions(sp) = totalDist / numFramesTest;
+        end
+        
+        [~, recognizedSpeaker] = min(distortions);
+        predictedLabelsNotch(i) = recognizedSpeaker;
+    end
+    
+    acc = sum(predictedLabelsNotch == trueLabels) / numTest;
+    notchAccuracies(nf) = acc;
+    fprintf('Notch Frequency %d Hz: Test Accuracy = %.2f%%\n', notchFreq, acc*100);
+end
+
+
+%% Test 9 %%
+
+fs_mel       = 12500;  % Sampling rate used for mel filter bank
+p            = 50;     % Number of mel filters
+n            = 512;    % FFT length
+nc           = 40;     % Number of MFCC coefficients to keep
+frameLen     = 256;    % Frame length in samples
+overlap      = 128;    % Overlap between frames (in samples)
+numCodewords = 8;      % Desired number of VQ codewords per speaker
+epsilon      = 0.0001; % Splitting factor for the LBG algorithm
+distortionThreshold = 0.000001; % Convergence Threshold for the LBG algorithm
+keepfirst = false; % Whether or not keep the first MFCC coefficient
+
+speakerCodebook = trainSpeakerRecognition(trainFolder, fs_mel, p, n, nc, frameLen, overlap, numCodewords, epsilon, distortionThreshold, keepfirst);
+
+[predictedLabels, trueLabels, Accuracy] = testSpeakerRecognition(testFolder, fs_mel, p, n, nc, frameLen, overlap, speakerCodebook, keepfirst);
+
+
+%% Test 10a %%
+
+fs_mel       = 12500;  % Sampling rate used for mel filter bank
+p            = 50;     % Number of mel filters
+n            = 512;    % FFT length
+nc           = 40;     % Number of MFCC coefficients to keep
+frameLen     = 256;    % Frame length in samples
+overlap      = 128;    % Overlap between frames (in samples)
+numCodewords = 8;      % Desired number of VQ codewords per speaker
+epsilon      = 0.0001; % Splitting factor for the LBG algorithm
+distortionThreshold = 0.000001; % Convergence Threshold for the LBG algorithm
+keepfirst = false; % Whether or not keep the first MFCC coefficient
+
+rainFolder = 'Data/Speach_Data_2024/Training_Data';
+testFolder = 'Data/Speach_Data_2024/Test_Data';
+speakerCodebook = trainSpeakerRecognition(trainFolder, fs_mel, p, n, nc, frameLen, overlap, numCodewords, epsilon, distortionThreshold, keepfirst);
+[predictedLabels0, trueLabels0, Accuracy0] = testSpeakerRecognition(testFolder, fs_mel, p, n, nc, frameLen, overlap, speakerCodebook, keepfirst);
+
+trainFolder = 'Data/2024StudentAudioRecording/Zero-Training';
+testFolder = 'Data/2024StudentAudioRecording/Zero-Testing';
+speakerCodebook = trainSpeakerRecognition(trainFolder, fs_mel, p, n, nc, frameLen, overlap, numCodewords, epsilon, distortionThreshold, keepfirst);
+[predictedLabels1, trueLabels1, Accuracy1] = testSpeakerRecognition(testFolder, fs_mel, p, n, nc, frameLen, overlap, speakerCodebook, keepfirst);
+
+trainFolder = 'Data/2024StudentAudioRecording/Twelve-Training';
+testFolder = 'Data/2024StudentAudioRecording/Twelve-Testing';
+speakerCodebook = trainSpeakerRecognition(trainFolder, fs_mel, p, n, nc, frameLen, overlap, numCodewords, epsilon, distortionThreshold, keepfirst);
+[predictedLabels2, trueLabels2, Accuracy2] = testSpeakerRecognition(testFolder, fs_mel, p, n, nc, frameLen, overlap, speakerCodebook, keepfirst);
+
+trainFolder = 'Data/2025StudentAudioRecording/Five Training';
+testFolder = 'Data/2025StudentAudioRecording/Five Test';
+speakerCodebook = trainSpeakerRecognition(trainFolder, fs_mel, p, n, nc, frameLen, overlap, numCodewords, epsilon, distortionThreshold, keepfirst);
+[predictedLabels4, trueLabels4, Accuracy4] = testSpeakerRecognition(testFolder, fs_mel, p, n, nc, frameLen, overlap, speakerCodebook, keepfirst);
+
+trainFolder = 'Data/2025StudentAudioRecording/Eleven Training';
+testFolder = 'Data/2025StudentAudioRecording/Eleven Test';
+speakerCodebook = trainSpeakerRecognition(trainFolder, fs_mel, p, n, nc, frameLen, overlap, numCodewords, epsilon, distortionThreshold, keepfirst);
+[predictedLabels5, trueLabels5, Accuracy5] = testSpeakerRecognition(testFolder, fs_mel, p, n, nc, frameLen, overlap, speakerCodebook, keepfirst);
+

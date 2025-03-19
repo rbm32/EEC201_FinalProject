@@ -1,4 +1,4 @@
-numClusters = 10;
+numClusters = 5;
 pointsPerCluster = 5;
 stdDev = .025
 data1 = generateClusters(numClusters, pointsPerCluster, stdDev)';

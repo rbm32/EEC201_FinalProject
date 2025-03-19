@@ -1,3 +1,36 @@
+%% ========================================================================
+%  EEC 201 Final Project - Speaker Recognition Optimization
+%  University of California, Davis
+%
+%  Authors: Haodong Liang and Ryan Bruch
+%  Modified by: [Your Name]
+
+%  Description:
+%  This script optimizes the parameters of a speaker recognition system 
+%  using two approaches:
+%  
+%  1. **Brute Force Search**:
+%     - Iterates through all possible parameter combinations.
+%     - Evaluates recognition accuracy for each setting.
+%     - Stores the best-performing parameter set.
+%  
+%  2. **Genetic Algorithm (GA) Optimization**:
+%     - Uses an evolutionary approach to efficiently find optimal parameters.
+%     - Adapts parameter selection over generations to maximize accuracy.
+%     - Saves the best-found parameters and accuracy.
+%
+%  How to Use:
+%  1. Ensure all training and testing `.wav` files are stored in correctly 
+%     structured folders defined in the `datasets` variable.
+%  2. Run the script to perform parameter optimization.
+%  3. The script will output and save:
+%     - A table of tested parameter combinations and their accuracies.
+%     - The best-performing parameter set.
+%     - The estimated recognition accuracy for the best parameters.
+
+%% Optimization code
+
+
 clear; clc; close all;
 addpath("SpeechRecognition");
 addpath("Functions");
@@ -188,7 +221,7 @@ bestParamsTable = table(bestParams(1), bestParams(2), bestParams(3), bestParams(
     'VariableNames', {'p', 'n', 'nc', 'frameLen', 'overlap', 'numCodewords', 'Total_Accuracy'});
 
 % Save to .mat file
-save('OptimizationResults\\BestGAParameters.mat', 'bestParamsTable');
+save('OptimizationResults\BestGAParameters.mat', 'bestParamsTable');
 
 % Display Best Found Parameters
 fprintf('\n=== Best Parameters Found ===\n');
@@ -196,69 +229,6 @@ fprintf('p = %d, n = %d, nc = %d, frameLen = %d, overlap = %d, numCodewords = %d
         bestParams(1), bestParams(2), bestParams(3), bestParams(4), bestParams(5), bestParams(6));
 fprintf('Best Accuracy Achieved: %.4f\n', -bestAccuracy);
 fprintf('Best parameters have been saved in BestGAParameters.mat\n');
-
-%%
-% Define parameters
-fs_mel       = 12500;  % Sampling rate used for mel filter bank
-
-epsilon      = 0.0001; % Splitting factor for the LBG algorithm
-distortionThreshold = 0.000001; % Convergence Threshold for the LBG algorithm
-keepfirst = false; % Whether or not keep the first MFCC coefficientt
-if ~isempty(bestParams)
-    p            = bestParams(1);
-    n            = bestParams(2);
-    nc           = bestParams(3);
-    frameLen     = bestParams(4);
-    overlap      = bestParams(5);
-    numCodewords = bestParams(6);
-end
-% Initialize counters
-totalCorrect = 0;
-totalSamples = 0;
-
-% Dataset paths
-datasets = {
-    {'Data/Speach_Data_2024/Training_Data', 'Data/Speach_Data_2024/Test_Data'};
-    {'Data/2024StudentAudioRecording/Zero-Training', 'Data/2024StudentAudioRecording/Zero-Testing'};
-    {'Data/2024StudentAudioRecording/Twelve-Training', 'Data/2024StudentAudioRecording/Twelve-Testing'};
-    {'Data/2025StudentAudioRecording/Five Training', 'Data/2025StudentAudioRecording/Five Test'};
-    {'Data/2025StudentAudioRecording/Eleven Training', 'Data/2025StudentAudioRecording/Eleven Test'}
-};
-
-% Loop through each dataset
-for i = 1:length(datasets)
-    trainFolder = datasets{i}{1};
-    testFolder = datasets{i}{2};
-
-    % Train speaker recognition model
-    speakerCodebook = trainSpeakerRecognition(trainFolder, fs_mel, p, n, nc, frameLen, overlap, numCodewords, epsilon, distortionThreshold, keepfirst);
-
-    % Test speaker recognition model
-    [predictedLabels, trueLabels, Accuracy] = testSpeakerRecognition(testFolder, fs_mel, p, n, nc, frameLen, overlap, speakerCodebook, keepfirst);
-
-    % Compute correct predictions and update counters
-    correctPredictions = sum(predictedLabels == trueLabels);
-    numSamples = length(trueLabels);
-
-    totalCorrect = totalCorrect + correctPredictions;
-    totalSamples = totalSamples + numSamples;
-
-    % Display dataset accuracy
-    fprintf('Dataset %d Accuracy: %.2f%% (%d/%d correct)\n', i, Accuracy * 100, correctPredictions, numSamples);
-end
-
-% Compute total accuracy
-if totalSamples > 0
-    totalAccuracy = totalCorrect / totalSamples;
-else
-    totalAccuracy = NaN; % Avoid division by zero
-end
-
-% Display final total accuracy
-fprintf('\n=== Total Accuracy Across All Datasets ===\n');
-fprintf('Total Correct Predictions: %d\n', totalCorrect);
-fprintf('Total Test Samples: %d\n', totalSamples);
-fprintf('Total Accuracy: %.2f%%\n', totalAccuracy * 100);
 
 
 %% Optimized Fitness Function
@@ -290,7 +260,7 @@ function totalAccuracy = evaluateParameters(p, n, nc, frameLen, overlap, numCode
     accuracies = nan(1, length(datasets));  
     dataset_sizes = zeros(1, length(datasets)); % Preallocate with zeros
 
-    for i = 1:length(datasets)
+    parfor i = 1:length(datasets)
         trainFolder = datasets{i}{1};
         testFolder = datasets{i}{2};
 
