@@ -28,6 +28,8 @@
     h3 { font-size: 18px; }
 </style> -->
 
+12-minute video presentation about our work: https://drive.google.com/file/d/1CcO-cTzstWxO3LkYgZf2i5VJ0PtSW1Cz/view?usp=sharing
+
 # Background
 Speech recognition is the process of identifying a speaker based on the information encoded in the sound waves of their speech. This technology is ubiquitous in modern technology, especially with the rise of voice-controlled assistants. The goal of this project is to develop a simple yet effective method of speaker recognition using Digital Signal Processing Techniques. This will be accomplished in two phases: training and testing. In the training phase, speech samples from known speakers will be used to create a codebook with each speaker's unique voice profile. In the testing phase, the system will analyze speech from an unknown speaker, extract the key features, and match them against the stored codebooks to identify the speaker.
 
