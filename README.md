@@ -140,5 +140,8 @@ This dataset contains the speech signals of "zero" and "twelve" of 18 students i
 
 This dataset contains the speech signals of "five" and "eleven" of 23 students in the EEC 2025 class. Similarly, we first identify the speakers with "Five" speech, the resulting test accuracy hits 100%. We then identify the speakers with "Eleven" speech, the resulting test accuracy is also 100%. 
 
-In conclusion, our model is capable of identifying different speakers with high accuracy and good robustness.
+
+### Final Results
+
+The model was able to correctly identify a total of 88 out of the 90 speakers it was tested on, resulting in a total accuracy of about 97%. In conclusion, our model is capable of identifying different speakers with high accuracy and good robustness.
 
